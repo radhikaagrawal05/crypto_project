@@ -1,0 +1,58 @@
+(* Cryptographic primitives *)
+fun H(bitstring, bitstring): bitstring.
+fun HMAC(bitstring, bitstring): bitstring.
+fun pair(bitstring, bitstring): bitstring.
+
+reduc forall x: bitstring, y: bitstring; fst(pair(x, y)) = x.
+reduc forall y: bitstring, x: bitstring; snd(pair(x, y)) = y.
+
+(* Public Key / Statement Generation *)
+fun pk(bitstring): bitstring.
+
+(* ZKP Verification Primitive *)
+const ok: bitstring.
+fun verify(bitstring, bitstring, bitstring, bitstring, bitstring): bitstring
+(* THE FIX: H(p,n) is now explicitly bound inside the HMAC so sessions can't be mixed *)
+reduc forall p: bitstring, n: bitstring, chal: bitstring, t: bitstring; 
+    verify(pk(p), H(p, n), chal, HMAC(p, pair(H(p, n), pair(chal, t))), t) = ok.
+
+(* Channels and Secrets *)
+free c: channel.
+free P: bitstring [private].
+
+(* Events for authentication *)
+event sentProof(bitstring, bitstring, bitstring, bitstring, bitstring).
+event acceptedProof(bitstring, bitstring, bitstring, bitstring).
+
+(* Queries *)
+query attacker(P).
+query p: bitstring, com: bitstring, chal: bitstring, pr: bitstring, t: bitstring;
+    event(acceptedProof(com, chal, pr, t)) ==> event(sentProof(p, com, chal, pr, t)).
+query p: bitstring, com: bitstring, chal: bitstring, pr: bitstring, t: bitstring;
+    inj-event(acceptedProof(com, chal, pr, t)) ==> inj-event(sentProof(p, com, chal, pr, t)).
+
+(* Processes *)
+let Observer() =
+    new n: bitstring;
+    let com = H(P, n) in
+    out(c, com);
+    in(c, chal: bitstring);
+    new t: bitstring;
+    (* We nest 'com' into the proof so the attacker cannot reuse it for a different commitment *)
+    let pr = HMAC(P, pair(com, pair(chal, t))) in
+    event sentProof(P, com, chal, pr, t);
+    out(c, pair(pr, t)).
+
+let Verifier() =
+    in(c, com: bitstring);
+    new chal: bitstring;
+    out(c, chal);
+    in(c, resp: bitstring);
+    let pr = fst(resp) in
+    let t  = snd(resp) in
+    if verify(pk(P), com, chal, pr, t) = ok then
+    event acceptedProof(com, chal, pr, t).
+
+process
+    out(c, pk(P));
+    (!Observer() | !Verifier())
