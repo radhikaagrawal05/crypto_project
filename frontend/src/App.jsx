@@ -106,7 +106,12 @@ function App() {
       setStep(2);
     } catch (err) {
       console.error(err);
-      addLog("Failed to generate Challenge vector.");
+      const backendError = err?.response?.data?.error || err?.response?.data?.message;
+      if (backendError) {
+        addLog(`Challenge request failed: ${backendError}`, true);
+      } else {
+        addLog("Failed to generate Challenge vector.");
+      }
     }
   };
 
@@ -120,7 +125,12 @@ function App() {
       setStep(3);
     } catch (err) {
       console.error(err);
-      addLog("Failed to produce cryptographic proof.");
+      const backendError = err?.response?.data?.error || err?.response?.data?.message;
+      if (backendError) {
+        addLog(`Proof generation failed: ${backendError}`, true);
+      } else {
+        addLog("Failed to produce cryptographic proof.");
+      }
     }
   };
 
@@ -133,7 +143,16 @@ function App() {
       setStep(4);
     } catch (err) {
       console.error(err);
-      addLog("Failed to run verification logic.");
+      const backendError =
+        err?.response?.data?.error ||
+        err?.response?.data?.result ||
+        err?.response?.data?.details ||
+        err?.response?.data?.message;
+      if (backendError) {
+        addLog(`Verification failed: ${backendError}`, true);
+      } else {
+        addLog("Failed to run verification logic.");
+      }
     }
   };
   

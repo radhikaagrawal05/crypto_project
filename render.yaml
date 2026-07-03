@@ -1,0 +1,13 @@
+# render.yaml — Render.com deployment config
+services:
+  - type: web
+    name: cns-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
